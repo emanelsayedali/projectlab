@@ -25,7 +25,6 @@
  * Student: <YOUR NAME HERE>
  */
 #include <stdio.h>
-#include <string.h>
 
 #include "ui.h"
 #include "house.h"
@@ -143,16 +142,7 @@ uint8_t pickRoom(void)
  */
 void setOccupancy(void)
 {
-    uint8_t i = pickRoom();
-    Room_t *room;
-
-    if (i == 255U) { return; }
-    room = houseRoom(i);
-    TOGGLE_BIT(room->status, BIT_OCCUPIED);
-    statusSet(C_OK, "%s: people %s.", room->name,
-              READ_BIT(room->status, BIT_OCCUPIED) ? "entered" : "left");
-    render((int)i);
-    pauseKey();
+    printf("  TODO setOccupancy\n");
 }
 
 
@@ -183,22 +173,7 @@ void setOccupancy(void)
  */
 void setTemperature(void)
 {
-    uint8_t i = pickRoom();
-    int adc;
-    Room_t *room;
-
-    if (i == 255U) { return; }
-    printf("  Raw ADC reading (0..%u): ", ADC_MAX);
-    if (!readInt(&adc) || adc < 0 || adc > (int)ADC_MAX) {
-        statusSet(C_ALARM, "Invalid ADC reading.");
-        return;
-    }
-    room = houseRoom(i);
-    room->adc = (uint16_t)adc;
-    statusSet(C_OK, "%s: ADC %u -> %u C", room->name, room->adc,
-              tempC(room->adc));
-    render((int)i);
-    pauseKey();
+    printf("  TODO setTemperature\n");
 }
 
 
@@ -235,44 +210,7 @@ void setTemperature(void)
  */
 void switchDevice(void)
 {
-    uint8_t i = pickRoom();
-    int choice;
-    Room_t *room;
-
-    if (i == 255U) { return; }
-    printf("  Switch (1=Lamp 2=Fan 3=Auto mode): ");
-    if (!readInt(&choice)) {
-        statusSet(C_ALARM, "Nothing switched.");
-        return;
-    }
-    room = houseRoom(i);
-    switch (choice) {
-        case 1:
-            TOGGLE_BIT(room->status, BIT_LAMP);
-            CLR_BIT(room->status, BIT_AUTO);
-            statusSet(C_LAMP, "%s: lamp switched %s.", room->name,
-                      READ_BIT(room->status, BIT_LAMP) ? "on" : "off");
-            break;
-        case 2:
-            TOGGLE_BIT(room->status, BIT_FAN);
-            CLR_BIT(room->status, BIT_AUTO);
-            statusSet(C_FAN, "%s: fan switched %s.", room->name,
-                      READ_BIT(room->status, BIT_FAN) ? "on" : "off");
-            break;
-        case 3:
-            TOGGLE_BIT(room->status, BIT_AUTO);
-            statusSet(C_AUTO, "%s: auto mode %s.", room->name,
-                      READ_BIT(room->status, BIT_AUTO) ? "enabled" : "disabled");
-            break;
-        default:
-            statusSet(C_ALARM, "Nothing switched.");
-            return;
-    }
-    render((int)i);
-    printf("  %s status = ", room->name);
-    printBinary(room->status);
-    printf("  (0x%02X)\n", room->status);
-    pauseKey();
+    printf("  TODO switchDevice\n");
 }
 
 
@@ -306,34 +244,7 @@ void switchDevice(void)
  */
 void houseReport(void)
 {
-    const Room_t *rooms = houseRooms();
-    uint8_t hottest = 0U;
-    uint8_t coldest = 0U;
-    uint32_t total;
-
-    render(-1);
-    printf("\n  HOUSE REPORT\n");
-    printf("  Lamps ON  %u/%u ", countRoomsWith(BIT_LAMP), ROOM_COUNT);
-    drawBar(countRoomsWith(BIT_LAMP), ROOM_COUNT, REPORT_BAR_W, C_LAMP);
-    printf("\n  Fans ON   %u/%u ", countRoomsWith(BIT_FAN), ROOM_COUNT);
-    drawBar(countRoomsWith(BIT_FAN), ROOM_COUNT, REPORT_BAR_W, C_FAN);
-    printf("\n  Occupied  %u/%u ", countRoomsWith(BIT_OCCUPIED), ROOM_COUNT);
-    drawBar(countRoomsWith(BIT_OCCUPIED), ROOM_COUNT, REPORT_BAR_W, C_OK);
-    printf("\n  Alarms    %u/%u ", countRoomsWith(BIT_ALARM), ROOM_COUNT);
-    drawBar(countRoomsWith(BIT_ALARM), ROOM_COUNT, REPORT_BAR_W, C_ALARM);
-
-    for (uint8_t i = 1U; i < ROOM_COUNT; i++) {
-     if (rooms[i].adc > rooms[hottest].adc) { hottest = i; }
-     if (rooms[i].adc < rooms[coldest].adc) { coldest = i; }
-    }
-    total = sumAdc(rooms, ROOM_COUNT);
-    printf("\n\n  Hottest: %s (%u C)\n", rooms[hottest].name,
-        tempC(rooms[hottest].adc));
-    printf("  Coldest: %s (%u C)\n", rooms[coldest].name,
-        tempC(rooms[coldest].adc));
-    printf("  Average: %u C (raw sum %lu)\n", tempC((uint16_t)(total / ROOM_COUNT)),
-        (unsigned long)total);
-    pauseKey();
+    printf("  TODO houseReport\n");
 }
 
 
@@ -372,35 +283,5 @@ void houseReport(void)
  */
 void runAutomation(void)
 {
-    char trace[ROOM_COUNT][96];
-    uint8_t changed = 0U;
-
-    for (uint8_t i = 0U; i < ROOM_COUNT; i++) {
-        Room_t *room = houseRoom(i);
-        uint8_t before = room->status;
-        uint16_t temperature = tempC(room->adc);
-
-        if (!READ_BIT(before, BIT_AUTO)) {
-            snprintf(trace[i], sizeof trace[i], "  %-10s %3u C   skipped (MANUAL)",
-                     room->name, temperature);
-        } else {
-            uint8_t didChange = applyRules(room);
-            changed = (uint8_t)(changed + didChange);
-            snprintf(trace[i], sizeof trace[i], "  %-10s %3u C   ", room->name,
-                     temperature);
-            {
-                size_t used = strlen(trace[i]);
-                snprintf(trace[i] + used, sizeof trace[i] - used,
-                         "0x%02X -> 0x%02X%s", before, room->status,
-                         didChange ? "  *" : "");
-            }
-        }
-    }
-    render(-1);
-    printf("\n  AUTOMATION TRACE\n");
-    for (uint8_t i = 0U; i < ROOM_COUNT; i++) {
-        printf("%s\n", trace[i]);
-    }
-    printf("\n  %u room(s) changed.\n", changed);
-    pauseKey();
+    printf("  TODO runAutomation\n");
 }

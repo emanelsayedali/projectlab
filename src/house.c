@@ -29,7 +29,7 @@
  * Student: <YOUR NAME HERE>
  */
 #include "house.h"
-#include <string.h>
+#include <string.h>     /* for strncpy() */
 
 /* ---------------- module-private data (NFR-03) ---------------
  * GIVEN. The array is static, so nothing outside this file can reach it.
@@ -79,14 +79,17 @@ void houseInit(void)
     static const uint16_t SEED_ADC[ROOM_COUNT] = { 51U, 64U, 45U, 58U, 49U, 96U };
     static const uint8_t  SEED_OCC[ROOM_COUNT] = { 1U, 0U, 0U, 0U, 1U, 0U };
 
-    for (uint8_t i = 0U; i < ROOM_COUNT; i++) {
-        strncpy(house[i].name, NAMES[i], NAME_LEN - 1U);
-        house[i].name[NAME_LEN - 1U] = '\0';
-        house[i].adc = SEED_ADC[i];
-        house[i].status = 0U;
-        SET_BIT(house[i].status, BIT_AUTO);
-        if (SEED_OCC[i]) {
-            SET_BIT(house[i].status, BIT_OCCUPIED);
+    /* TODO: the loop described above. */
+    for(uint8_t i = 0U; i<ROOM_COUNT;i++)
+    {
+        strncpy(house[i].name,NAMES[i],NAME_LEN-1);
+        house[i].name[NAME_LEN-1] = '\0';
+        house[i].adc=SEED_ADC[i];
+        house[i].status=0U;
+        SET_BIT(house[i].status,BIT_AUTO);
+        if (SEED_OCC[i])
+        {
+            SET_BIT(house[i].status,BIT_OCCUPIED);
         }
     }
 }
@@ -118,7 +121,10 @@ void houseInit(void)
  */
 uint16_t tempC(uint16_t adc)
 {
-    return (uint16_t)(((uint32_t)adc * 500U) / 1024U);
+    uint32_t temp = (uint32_t)adc;
+    temp = (temp * 500) / 1024;
+    return (uint16_t)temp;
+          /* TODO */
 }
 
 
@@ -161,36 +167,8 @@ uint16_t tempC(uint16_t adc)
  */
 uint8_t applyRules(Room_t *r)
 {
-    uint8_t oldStatus;
-    uint16_t temperature;
-
-    if (!READ_BIT(r->status, BIT_AUTO)) {
-        return 0U;
-    }
-
-    oldStatus = r->status;
-    temperature = tempC(r->adc);
-
-    if (READ_BIT(r->status, BIT_OCCUPIED)) {
-        SET_BIT(r->status, BIT_LAMP);
-    } else {
-        CLR_BIT(r->status, BIT_LAMP);
-    }
-
-    if (temperature >= TEMP_HOT) {
-        SET_BIT(r->status, BIT_FAN);
-    } else {
-        CLR_BIT(r->status, BIT_FAN);
-    }
-
-    if (temperature >= TEMP_ALARM) {
-        SET_BIT(r->status, BIT_ALARM);
-        SET_BIT(r->status, BIT_LAMP);
-    } else {
-        CLR_BIT(r->status, BIT_ALARM);
-    }
-
-    return r->status != oldStatus ? 1U : 0U;
+    (void)r;        /* delete this line */
+    return 0U;      /* TODO */
 }
 
 
@@ -215,12 +193,7 @@ uint8_t applyRules(Room_t *r)
  */
 uint8_t rulesPass(void)
 {
-    uint8_t changed = 0U;
-
-    for (uint8_t i = 0U; i < ROOM_COUNT; i++) {
-        changed = (uint8_t)(changed + applyRules(&house[i]));
-    }
-    return changed;
+    return 0U;      /* TODO */
 }
 
 
@@ -238,14 +211,8 @@ uint8_t rulesPass(void)
  */
 uint8_t countRoomsWith(uint8_t bit)
 {
-    uint8_t count = 0U;
-
-    for (uint8_t i = 0U; i < ROOM_COUNT; i++) {
-        if (READ_BIT(house[i].status, bit)) {
-            count++;
-        }
-    }
-    return count;
+    (void)bit;      /* delete this line */
+    return 0U;      /* TODO */
 }
 
 
@@ -274,8 +241,6 @@ uint8_t countRoomsWith(uint8_t bit)
  */
 uint32_t sumAdc(const Room_t *rooms, uint8_t n)
 {
-    if (n == 0U) {
-        return 0UL;
-    }
-    return (uint32_t)rooms[n - 1U].adc + sumAdc(rooms, (uint8_t)(n - 1U));
+    (void)rooms; (void)n;   /* delete this line */
+    return 0UL;             /* TODO */
 }

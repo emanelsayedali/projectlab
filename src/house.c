@@ -177,16 +177,16 @@ uint8_t applyRules(Room_t *r)
 
     uint8_t oldstatus = r->status;
    uint16_t temperature = tempC(r->adc);
-        
-    if(READ_BIT(r->status , BIT_OCCUPIED))   /*R1*/
+      if(temperature >= TEMP_ALARM)           /*R3*/
     {
-        {SET_BIT(r->status , BIT_LAMP);}
+        SET_BIT(r->status , BIT_ALARM);
+        SET_BIT(r->status , BIT_LAMP);
     }
     else
     {
-        CLR_BIT(r->status , BIT_LAMP);
-    }
-
+        CLR_BIT(r->status , BIT_ALARM);
+    }   
+    
     if(temperature >=TEMP_HOT)              /*R2*/
     {
         SET_BIT(r->status , BIT_FAN);
@@ -195,14 +195,13 @@ uint8_t applyRules(Room_t *r)
     {
         CLR_BIT(r->status , BIT_FAN);
     }
-    if(temperature >= TEMP_ALARM)           /*R3*/
+   if(READ_BIT(r->status , BIT_OCCUPIED))   /*R1*/
     {
-        SET_BIT(r->status , BIT_ALARM);
-        SET_BIT(r->status , BIT_LAMP);
+        {SET_BIT(r->status , BIT_LAMP);}
     }
     else
     {
-        CLR_BIT(r->status , BIT_ALARM);
+        CLR_BIT(r->status , BIT_LAMP);
     }
    if (r->status != oldstatus) {
     return 1U;

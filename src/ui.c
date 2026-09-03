@@ -25,6 +25,7 @@
  * Student: <eman elsayed ali>
  */
 #include <stdio.h>
+#include <string.h>
 
 #include "ui.h"
 #include "house.h"
@@ -192,8 +193,8 @@ void setTemperature(void)
         return;
     }
     printf("  Raw ADC reading (0..%u): ", ADC_MAX);
-    if (!readInt(&adc) || adc < 0 || adc > ADC_MAX) {
-        statusSet(C_ALARM, "Invalid ADC reading.");
+    if (!readInt(&adc) || adc < 0 || adc > (int)ADC_MAX) {
+        statusSet(C_ALARM, "Invalid ADC reading."); 
         return;
     }
 
@@ -309,7 +310,32 @@ void switchDevice(void)
  */
 void houseReport(void)
 {
-    printf("  TODO houseReport\n");
+    const Room_t *rooms = houseRooms();
+    uint8_t hottest_room = 0;
+    uint8_t coldest_room ;
+    int total;
+    render(-1);
+    printf("  Lamps ON %u/%u ", countRoomsWith(BIT_LAMP), ROOM_COUNT);
+    drawBar(countRoomsWith(BIT_LAMP), ROOM_COUNT, REPORT_BAR_W, C_LAMP);
+    printf("\n  Fans ON   %u/%u ", countRoomsWith(BIT_FAN), ROOM_COUNT);
+    drawBar(countRoomsWith(BIT_FAN), ROOM_COUNT, REPORT_BAR_W, C_FAN);
+    printf("\n  Occupied  %u/%u ", countRoomsWith(BIT_OCCUPIED), ROOM_COUNT);
+    drawBar(countRoomsWith(BIT_OCCUPIED), ROOM_COUNT, REPORT_BAR_W, C_OK);
+    printf("\n  Alarms    %u/%u ", countRoomsWith(BIT_ALARM), ROOM_COUNT);
+    drawBar(countRoomsWith(BIT_ALARM), ROOM_COUNT, REPORT_BAR_W, C_ALARM);
+
+    for (uint8_t i = 1U; i < ROOM_COUNT; i++) {
+     if (rooms[i].adc > rooms[hottest_room].adc) { hottest_room = i; }
+     if (rooms[i].adc < rooms[coldest_room].adc) { coldest_room = i; }
+    }
+    total = sumAdc(rooms, ROOM_COUNT);
+    printf("\n\n  Hottest: %s (%u C)\n", rooms[hottest_room].name,
+        tempC(rooms[hottest_room].adc));
+    printf("  Coldest: %s (%u C)\n", rooms[coldest_room].name,
+        tempC(rooms[coldest_room].adc));
+    printf("  Average: %u C (raw sum %lu)\n", tempC((uint16_t)(total / ROOM_COUNT)),
+        (unsigned long)total);
+    pauseKey();
 }
 
 
@@ -348,5 +374,35 @@ void houseReport(void)
  */
 void runAutomation(void)
 {
-    printf("  TODO runAutomation\n");
+    char trace[ROOM_COUNT][96];
+    uint8_t changed = 0U;
+
+    for (uint8_t i = 0U; i < ROOM_COUNT; i++) {
+        Room_t *room = houseRoom(i);
+        uint8_t before = room->status;
+        uint16_t temperature = tempC(room->adc);
+
+        if (!READ_BIT(before, BIT_AUTO)) {
+            snprintf(trace[i], sizeof trace[i], "  %-10s %3u C   skipped (MANUAL)",
+                     room->name, temperature);
+        } else {
+            uint8_t didChange = applyRules(room);
+            changed = (uint8_t)(changed + didChange);
+            snprintf(trace[i], sizeof trace[i], "  %-10s %3u C   ", room->name,
+                     temperature);
+            {
+                size_t used = strlen(trace[i]);
+                snprintf(trace[i] + used, sizeof trace[i] - used,
+                         "0x%02X -> 0x%02X%s", before, room->status,
+                         didChange ? "  *" : "");
+            }
+        }
+    }
+    render(-1);
+    printf("\n  AUTOMATION TRACE\n");
+    for (uint8_t i = 0U; i < ROOM_COUNT; i++) {
+        printf("%s\n", trace[i]);
+    }
+    printf("\n  %u room(s) changed.\n", changed);
+    pauseKey();
 }

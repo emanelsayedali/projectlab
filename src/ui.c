@@ -131,7 +131,8 @@ uint8_t pickRoom(void)
  * Somebody walks in or out. The shortest function in the file — do it first
  * to get the shape into your fingers.
  *
- *   1. i = pickRoom(); if it is 255, return immediately
+ *   1. i = pickRoom() اول حاجة هستدعى الدالة دى; 
+ *  هستخدم if عشان انف1 الجزء ده if it is 255, return immediately
  *   2. TOGGLE_BIT the OCCUPIED flag of that room
  *   3. statusSet() a message saying who is in the room now
  *   4. render((int)i) then pauseKey()
@@ -142,7 +143,17 @@ uint8_t pickRoom(void)
  */
 void setOccupancy(void)
 {
-    printf("  TODO setOccupancy\n");
+    uint8_t j = pickRoom();     /*عرض قائمة اختيار الغرفة*/ 
+    if (j==255u)
+    {
+        return;
+    }
+    
+    TOGGLE_BIT(houseRoom(j)->status , BIT_OCCUPIED);
+    statusSet(C_OK, "%s: people %s", houseRoom(j)->name , READ_BIT(houseRoom(j)->status , BIT_OCCUPIED) ? "yes" : "no");/*اختيار شخص يغير من حالة الغرفة*/ 
+     /*اعادة رسم الشاشة و الانتظار*/
+    render((int)j); 
+    pauseKey();
 }
 
 
@@ -160,10 +171,11 @@ void setOccupancy(void)
  *
  * Write a new raw ADC count into one room.
  *
- *   1. i = pickRoom()
- *   2. ask "  Raw ADC reading (0..1023): " and read an int with readInt()
+ *   1. i = pickRoom() 
+ *   2. ask "  Raw ADC reading (0..1023): " هنستخدم printf
+ * and read an int with readInt() عشان نتاكد ان الرقم صحيح
  *   3. reject anything outside 0..ADC_MAX with a statusSet() message and
- *      NO write to the model, then return
+ *      NO write to the model, then return ع
  *   4. otherwise store it and statusSet("%s: ADC %u -> %u C", ...)
  *   5. render((int)i), pauseKey()
  *
@@ -173,7 +185,26 @@ void setOccupancy(void)
  */
 void setTemperature(void)
 {
-    printf("  TODO setTemperature\n");
+    uint8_t i = pickRoom();
+    Room_t *room; // pointer to the chosen room
+    int adc ;
+    if (i == 255U) {
+        return;
+    }
+    printf("  Raw ADC reading (0..%u): ", ADC_MAX);
+    if (!readInt(&adc) || adc < 0 || adc > ADC_MAX) {
+        statusSet(C_ALARM, "Invalid ADC reading.");
+        return;
+    }
+
+     room = houseRoom(i);
+    room->adc = (uint16_t)adc;
+    statusSet(C_OK, "%s: ADC %u -> %u C", room->name, room->adc, tempC(room->adc));
+   
+
+    render((int)i); 
+    pauseKey();
+
 }
 
 
@@ -209,8 +240,42 @@ void setTemperature(void)
  * is exactly how a real thermostat behaves — manual override wins.
  */
 void switchDevice(void)
-{
-    printf("  TODO switchDevice\n");
+{uint8_t i = pickRoom();
+    int choice;
+    Room_t *room;
+
+    if (i == 255U) { return; }
+    printf("  Switch (1=Lamp 2=Fan 3=Auto mode): ");
+    if (!readInt(&choice)) {
+        statusSet(C_ALARM, "Nothing switched.");
+        return;
+    }
+    room = houseRoom(i);
+    switch (choice) {
+        case 1:
+            TOGGLE_BIT(room->status, BIT_LAMP);
+            CLR_BIT(room->status, BIT_AUTO);
+            statusSet(C_LAMP, "%s: lamp switched %s.", room->name,READ_BIT(room->status, BIT_LAMP) ? "on" : "off");
+            break;
+        case 2:
+            TOGGLE_BIT(room->status, BIT_FAN);
+            CLR_BIT(room->status, BIT_AUTO);
+            statusSet(C_FAN, "%s: fan switched %s.", room->name,READ_BIT(room->status, BIT_FAN) ? "on" : "off");
+            break;
+        case 3:
+            TOGGLE_BIT(room->status, BIT_AUTO);
+            statusSet(C_AUTO, "%s: auto mode %s.", room->name,READ_BIT(room->status, BIT_AUTO) ? "enabled" : "disabled");
+            break;
+        default:
+            statusSet(C_ALARM, "Nothing switched.");
+            return;
+    }
+    render((int)i);
+    printf("  %s status = ", room->name);
+    printBinary(room->status);
+    printf("  (0x%02X)\n", room->status);
+    pauseKey();
+   
 }
 
 

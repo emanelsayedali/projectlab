@@ -26,7 +26,7 @@
  *   - Nothing in this file prints anything. Printing is render.c's job.
  *
  * Smart Home Console · Day 03 midterm — G9
- * Student: <YOUR NAME HERE>
+ * Student: <eman elsayed ali>
  */
 #include "house.h"
 #include <string.h>     /* for strncpy() */
@@ -82,10 +82,10 @@ void houseInit(void)
     /* TODO: the loop described above. */
     for(uint8_t i = 0U; i<ROOM_COUNT;i++)
     {
-        strncpy(house[i].name,NAMES[i],NAME_LEN-1);
+        strncpy(house[i].name , NAMES[i],NAME_LEN-1);
         house[i].name[NAME_LEN-1] = '\0';
-        house[i].adc=SEED_ADC[i];
-        house[i].status=0U;
+        house[i].adc = SEED_ADC[i];
+        house[i].status = 0U;
         SET_BIT(house[i].status,BIT_AUTO);
         if (SEED_OCC[i])
         {
@@ -121,10 +121,13 @@ void houseInit(void)
  */
 uint16_t tempC(uint16_t adc)
 {
-    uint32_t temp = (uint32_t)adc;
+  /* uint32_t temp = (uint32_t)adc;
     temp = (temp * 500) / 1024;
     return (uint16_t)temp;
-          /* TODO */
+ */
+return (uint16_t)(((uint32_t)adc * 500U) / 1024U);
+          
+
 }
 
 
@@ -167,8 +170,46 @@ uint16_t tempC(uint16_t adc)
  */
 uint8_t applyRules(Room_t *r)
 {
-    (void)r;        /* delete this line */
-    return 0U;      /* TODO */
+   
+   
+    if (!READ_BIT(r->status, BIT_AUTO)) 
+    {return 0U;}
+
+    uint8_t oldstatus = r->status;
+   uint16_t temperature = tempC(r->adc);
+        
+    if(READ_BIT(r->status , BIT_OCCUPIED))   /*R1*/
+    {
+        {SET_BIT(r->status , BIT_LAMP);}
+    }
+    else
+    {
+        CLR_BIT(r->status , BIT_LAMP);
+    }
+
+    if(temperature >=TEMP_HOT)              /*R2*/
+    {
+        SET_BIT(r->status , BIT_FAN);
+    }
+    else
+    {
+        CLR_BIT(r->status , BIT_FAN);
+    }
+    if(temperature >= TEMP_ALARM)           /*R3*/
+    {
+        SET_BIT(r->status , BIT_ALARM);
+        SET_BIT(r->status , BIT_LAMP);
+    }
+    else
+    {
+        CLR_BIT(r->status , BIT_ALARM);
+    }
+   if (r->status != oldstatus) {
+    return 1U;
+    } 
+   else {
+    return 0U;
+}
 }
 
 
@@ -178,7 +219,7 @@ uint8_t applyRules(Room_t *r)
  *  REQUIRES : [ 3 / 6 ] applyRules().
  *  GIVES    : a big one — menu option 7 (the scripted demo) comes alive and
  *             runs the whole evening by itself. That is your free test rig.
- *  USES     : applyRules(), ROOM_COUNT
+ *  USES     : applyRules(), ROOM_COUNT هستدعيهم فى الدالة 4
  *  CHECK    : press 7 and watch the story. Lamps must follow people, the
  *             Kitchen fan must start when it heats up, the Garage must alarm.
  * ==========================================================================
@@ -193,7 +234,12 @@ uint8_t applyRules(Room_t *r)
  */
 uint8_t rulesPass(void)
 {
-    return 0U;      /* TODO */
+    uint8_t channge = 0U;
+    for(uint8_t i = 0U ; i<ROOM_COUNT ; i++)
+    {
+      channge += applyRules(&house[i]);
+    }
+    return channge;
 }
 
 
@@ -208,11 +254,19 @@ uint8_t rulesPass(void)
  * ==========================================================================
  *
  * How many of the six rooms have this bit set. One loop, one READ_BIT.
+ * هستخدم if للفحص ولو موجود هوزد الcounmt 
  */
 uint8_t countRoomsWith(uint8_t bit)
 {
-    (void)bit;      /* delete this line */
-    return 0U;      /* TODO */
+    uint8_t count = 0U;
+    for(uint8_t i = 0U ; i<ROOM_COUNT ; i++)
+    {
+        if(READ_BIT(house[i].status ,bit))
+        {
+            count++;
+        }
+    }
+    return count;
 }
 
 
@@ -241,6 +295,10 @@ uint8_t countRoomsWith(uint8_t bit)
  */
 uint32_t sumAdc(const Room_t *rooms, uint8_t n)
 {
-    (void)rooms; (void)n;   /* delete this line */
-    return 0UL;             /* TODO */
+   if(n==0)
+   {
+    return 0U;
+   }        
+   return rooms[n-1].adc + sumAdc(rooms,n-1);
+   
 }

@@ -12,9 +12,9 @@ menu actions that let a person change it.
 
 | Field | Your answer |
 |-------|-------------|
-| **Full name** | |
-| **Email** | |
-| **Group** | G9 |
+| **full name** |eman elsayed ali |
+| **Email** |eman.elsayed.ali9@gmail.com |
+| **Group** | G11 |
 | **Date started** | 02-09-2026|
 | **Date submitted** | 03-09-2026|
 
